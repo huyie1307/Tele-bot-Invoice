@@ -83,3 +83,4 @@ async function appendToGoogleSheet(entry) {
     resource: { values: [row] },
   });
 }
+
