@@ -1,3 +1,4 @@
+console.log("BOT_TOKEN:", process.env.BOT_TOKEN);
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const { google } = require('googleapis');
