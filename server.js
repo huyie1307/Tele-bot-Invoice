@@ -3,6 +3,12 @@ console.log("BOT_TOKEN:", process.env.BOT_TOKEN);
 console.log("SPREADSHEET_ID:", process.env.SPREADSHEET_ID);
 console.log("SHEET_NAME:", process.env.SHEET_NAME);
 console.log("GOOGLE_CREDENTIALS loaded:", !!process.env.GOOGLE_CREDENTIALS); // true nếu có
+// Fix fetch/Headers undefined trong Node
+const { fetch, Headers, Request, Response } = require('undici');
+globalThis.fetch = fetch;
+globalThis.Headers = Headers;
+globalThis.Request = Request;
+globalThis.Response = Response;
 
 const TelegramBot = require('node-telegram-bot-api');
 const { google } = require('googleapis');
