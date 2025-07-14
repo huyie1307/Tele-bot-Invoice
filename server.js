@@ -144,13 +144,11 @@ async function appendToGoogleSheet(entry) {
   const sheets = google.sheets({ version: 'v4', auth: client });
 
   const row = [
-    entry.customer,
-    entry.category,
-    entry.subcategory,
-    entry.product,
-    entry.quantity,
-    entry.price
-  ];
+  entry.customer,
+  `${entry.category} - ${entry.subcategory} - ${entry.product}`,
+  entry.quantity,
+  entry.price,
+];
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
