@@ -1,16 +1,13 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { google } = require('googleapis');
 
-// Đọc biến môi trường Railway (đã setup sẵn)
 const token = process.env.BOT_TOKEN;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const SHEET_NAME = process.env.SHEET_NAME;
 const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
 
-// Khởi tạo bot
 const bot = new TelegramBot(token, { polling: true });
 
-// Khởi tạo Google Auth
 const auth = new google.auth.GoogleAuth({
   credentials: credentials,
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
@@ -18,7 +15,19 @@ const auth = new google.auth.GoogleAuth({
 
 const userStates = {};
 const userData = {};
-const products = ['Cam', 'Táo', 'Nho'];
+
+// Danh sách nhóm hàng hóa và phân loại con
+const productCategories = {
+  'Nước': ['Bia lon', 'Bia chai', 'Nước ngọt', 'Nước tăng lực', 'Sữa'],
+};
+
+const productSubcategories = {
+  'Bia lon': ['SG', 'HN'],
+  'Bia chai': ['SG', 'HN'],
+  'Nước ngọt': ['C2', 'Tắc mật ong', 'Trà bí đao Wonderfarm', 'Trà xanh Không độ', 'CG Foods'],
+  'Nước tăng lực': ['Bò húc', 'Number 1', 'Wakeup 247', 'Sting đỏ', 'Sting vàng'],
+  'Sữa': ['Kun vị cam', 'Kun vị dâu', 'Kun nhiệt đới', 'CG Foods ngô', 'Hàn Dưa', 'Hàn Dâu', 'Hàn Cafe'],
+};
 
 // /start
 bot.onText(/\/start/, (msg) => {
@@ -28,7 +37,7 @@ bot.onText(/\/start/, (msg) => {
   userData[chatId] = {};
 });
 
-// xử lý tin nhắn
+// Xử lý tin nhắn
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
@@ -38,29 +47,64 @@ bot.on('message', async (msg) => {
 
   if (state === 'awaiting_customer') {
     userData[chatId].customer = text;
-    userStates[chatId] = 'awaiting_product';
-    bot.sendMessage(chatId, '🛒 Chọn hàng hóa:', {
+    userStates[chatId] = 'awaiting_main_category';
+
+    const mainCategories = Object.keys(productCategories);
+    bot.sendMessage(chatId, '🛒 Chọn nhóm hàng hóa:', {
       reply_markup: {
-        keyboard: [products],
+        keyboard: [mainCategories],
         resize_keyboard: true,
         one_time_keyboard: true,
       },
     });
-  } else if (state === 'awaiting_product' && products.includes(text)) {
-    userData[chatId].product = text;
+  }
+
+  else if (state === 'awaiting_main_category' && productCategories[text]) {
+    userData[chatId].mainCategory = text;
+    userStates[chatId] = 'awaiting_sub_category';
+
+    const subCats = productCategories[text];
+    bot.sendMessage(chatId, `📦 ${text} gồm các loại:`, {
+      reply_markup: {
+        keyboard: [subCats],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      },
+    });
+  }
+
+  else if (state === 'awaiting_sub_category' && productSubcategories[text]) {
+    userData[chatId].subCategory = text;
+    userStates[chatId] = 'awaiting_detail';
+
+    const details = productSubcategories[text];
+    bot.sendMessage(chatId, `📌 Chọn loại ${text}:`, {
+      reply_markup: {
+        keyboard: [details],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      },
+    });
+  }
+
+  else if (state === 'awaiting_detail') {
+    userData[chatId].product = `${userData[chatId].subCategory} - ${text}`;
     userStates[chatId] = 'awaiting_quantity';
     bot.sendMessage(chatId, '✏️ Nhập số lượng:');
-  } else if (state === 'awaiting_quantity') {
+  }
+
+  else if (state === 'awaiting_quantity') {
     userData[chatId].quantity = text;
     userStates[chatId] = 'awaiting_price';
     bot.sendMessage(chatId, '💵 Nhập giá:');
-  } else if (state === 'awaiting_price') {
+  }
+
+  else if (state === 'awaiting_price') {
     userData[chatId].price = text;
 
     try {
       await appendToGoogleSheet(userData[chatId]);
-      bot.sendMessage(
-        chatId,
+      bot.sendMessage(chatId,
         `✅ Đã lưu:\n👤 ${userData[chatId].customer}\n📦 ${userData[chatId].product}\n🔢 SL: ${userData[chatId].quantity}\n💵 Giá: ${userData[chatId].price}`
       );
     } catch (error) {
@@ -73,6 +117,7 @@ bot.on('message', async (msg) => {
   }
 });
 
+// Hàm ghi Google Sheet
 async function appendToGoogleSheet(entry) {
   const client = await auth.getClient();
   const sheets = google.sheets({ version: 'v4', auth: client });
