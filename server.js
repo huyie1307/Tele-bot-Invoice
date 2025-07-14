@@ -1,5 +1,5 @@
 console.log("BOT_TOKEN:", process.env.BOT_TOKEN); // Kiểm tra xem Railway có inject biến không
-
+console.log("ID:", process.env.SPREADSHEET_ID);
 const TelegramBot = require('node-telegram-bot-api');
 const { google } = require('googleapis');
 const fs = require('fs');
