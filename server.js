@@ -1,39 +1,26 @@
-// Debug biến môi trường
-console.log("BOT_TOKEN:", process.env.BOT_TOKEN);
-console.log("SPREADSHEET_ID:", process.env.SPREADSHEET_ID);
-console.log("SHEET_NAME:", process.env.SHEET_NAME);
-console.log("GOOGLE_CREDENTIALS loaded:", !!process.env.GOOGLE_CREDENTIALS); // true nếu có
-// Fix fetch/Headers undefined trong Node
-const { fetch, Headers, Request, Response } = require('undici');
-globalThis.fetch = fetch;
-globalThis.Headers = Headers;
-globalThis.Request = Request;
-globalThis.Response = Response;
-
 const TelegramBot = require('node-telegram-bot-api');
 const { google } = require('googleapis');
 
-// Lấy biến môi trường từ Railway
+// Đọc biến môi trường Railway (đã setup sẵn)
 const token = process.env.BOT_TOKEN;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const SHEET_NAME = process.env.SHEET_NAME;
 const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
 
-// Khởi tạo bot Telegram
+// Khởi tạo bot
 const bot = new TelegramBot(token, { polling: true });
 
-// Google Auth
+// Khởi tạo Google Auth
 const auth = new google.auth.GoogleAuth({
   credentials: credentials,
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
-// State quản lý người dùng
 const userStates = {};
 const userData = {};
 const products = ['Cam', 'Táo', 'Nho'];
 
-// Lệnh /start
+// /start
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, '👤 Nhập tên khách hàng:');
@@ -41,13 +28,13 @@ bot.onText(/\/start/, (msg) => {
   userData[chatId] = {};
 });
 
-// Xử lý luồng nhập dữ liệu
+// xử lý tin nhắn
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
   const state = userStates[chatId];
 
-  if (!state || text.startsWith('/')) return; // Bỏ qua lệnh khác
+  if (!state || text.startsWith('/')) return;
 
   if (state === 'awaiting_customer') {
     userData[chatId].customer = text;
@@ -70,40 +57,38 @@ bot.on('message', async (msg) => {
   } else if (state === 'awaiting_price') {
     userData[chatId].price = text;
 
-    // Ghi dữ liệu vào Google Sheets
-    await appendToGoogleSheet(userData[chatId], chatId);
+    try {
+      await appendToGoogleSheet(userData[chatId]);
+      bot.sendMessage(
+        chatId,
+        `✅ Đã lưu:\n👤 ${userData[chatId].customer}\n📦 ${userData[chatId].product}\n🔢 SL: ${userData[chatId].quantity}\n💵 Giá: ${userData[chatId].price}`
+      );
+    } catch (error) {
+      console.error("Lỗi ghi vào Google Sheets:", error);
+      bot.sendMessage(chatId, "❌ Lỗi ghi vào Google Sheets.");
+    }
 
-    // Gửi thông báo thành công
-    bot.sendMessage(
-      chatId,
-      `✅ Đã lưu:\n👤 ${userData[chatId].customer}\n📦 ${userData[chatId].product}\n🔢 SL: ${userData[chatId].quantity}\n💵 Giá: ${userData[chatId].price}`
-    );
-
-    // Xóa state
     delete userStates[chatId];
     delete userData[chatId];
   }
 });
 
-// Ghi dữ liệu vào Google Sheets
-async function appendToGoogleSheet(entry, chatId) {
-  try {
-    const client = await auth.getClient();
-    const sheets = google.sheets({ version: 'v4', auth: client });
+async function appendToGoogleSheet(entry) {
+  const client = await auth.getClient();
+  const sheets = google.sheets({ version: 'v4', auth: client });
 
-    const row = [entry.customer, entry.product, entry.quantity, entry.price];
+  const row = [
+    entry.customer,
+    entry.product,
+    entry.quantity,
+    entry.price,
+  ];
 
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A1`,
-      valueInputOption: 'USER_ENTERED',
-      insertDataOption: 'INSERT_ROWS',
-      resource: { values: [row] },
-    });
-
-    console.log('✅ Đã ghi vào Google Sheets:', row);
-  } catch (error) {
-    console.error('❌ Lỗi ghi vào Google Sheets:', error);
-    bot.sendMessage(chatId, '⚠️ Lỗi khi lưu vào Google Sheets. Vui lòng thử lại.');
-  }
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_NAME}!A1`,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    resource: { values: [row] },
+  });
 }
