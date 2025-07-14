@@ -10,10 +10,15 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "engines": {
+  "node": "16.x"
+},
+
   "dependencies": {
     "dotenv": "^17.2.0",
     "googleapis": "^152.0.0",
     "node-telegram-bot-api": "^0.66.0",
     "xlsx": "^0.18.5"
   }
+  
 }
