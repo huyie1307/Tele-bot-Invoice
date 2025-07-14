@@ -1,24 +1,28 @@
-console.log("BOT_TOKEN:", process.env.BOT_TOKEN);
-require('dotenv').config();
+console.log("BOT_TOKEN:", process.env.BOT_TOKEN); // Kiểm tra xem Railway có inject biến không
+
 const TelegramBot = require('node-telegram-bot-api');
 const { google } = require('googleapis');
 const fs = require('fs');
 
+// Lấy token và thông tin sheet từ biến môi trường Railway
 const token = process.env.BOT_TOKEN;
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
+const SHEET_NAME = process.env.SHEET_NAME;
+
+// Tạo bot Telegram
 const bot = new TelegramBot(token, { polling: true });
 
+// Google Auth
 const auth = new google.auth.GoogleAuth({
   keyFile: 'credentials.json',
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-const SHEET_NAME = process.env.SHEET_NAME;
-
 const userStates = {};
 const userData = {};
 const products = ['Cam', 'Táo', 'Nho'];
 
+// Bắt đầu khi người dùng gọi /start
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   bot.sendMessage(chatId, '👤 Nhập tên khách hàng:');
@@ -26,6 +30,7 @@ bot.onText(/\/start/, (msg) => {
   userData[chatId] = {};
 });
 
+// Xử lý các bước nhập liệu
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
@@ -65,6 +70,7 @@ bot.on('message', async (msg) => {
   }
 });
 
+// Ghi dữ liệu vào Google Sheets
 async function appendToGoogleSheet(entry) {
   const client = await auth.getClient();
   const sheets = google.sheets({ version: 'v4', auth: client });
@@ -84,4 +90,3 @@ async function appendToGoogleSheet(entry) {
     resource: { values: [row] },
   });
 }
-
