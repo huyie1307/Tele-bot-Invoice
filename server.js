@@ -15,9 +15,10 @@ const bot = new TelegramBot(token, { polling: true });
 
 // Google Auth
 const auth = new google.auth.GoogleAuth({
-  keyFile: 'credentials.json',
+  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
+
 
 const userStates = {};
 const userData = {};
