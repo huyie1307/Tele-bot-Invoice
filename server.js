@@ -91,7 +91,7 @@ bot.on('message', async (msg) => {
     userData[chatId].customer = text;
     userStates[chatId] = 'awaiting_category';
     bot.sendMessage(chatId, '🛒 Chọn danh mục:', {
-      reply_markup: { keyboard: Object.keys(categories).map(c => [c]).concat([['/start']]), resize_keyboard: true }
+      reply_markup: { keyboard: [['/start'], ...Object.keys(categories).map(c => [c])], resize_keyboard: true }
     });
 
   } else if (state === 'awaiting_category') {
@@ -99,7 +99,7 @@ bot.on('message', async (msg) => {
     userData[chatId].category = text;
     userStates[chatId] = 'awaiting_subcategory';
     bot.sendMessage(chatId, `🔍 Chọn nhóm hàng thuộc "${text}":`, {
-      reply_markup: { keyboard: Object.keys(categories[text]).map(i => [i]).concat([['/start']]), resize_keyboard: true }
+      reply_markup: { keyboard: [['/start'], ...Object.keys(categories[text]).map(i => [i])], resize_keyboard: true }
     });
 
   } else if (state === 'awaiting_subcategory') {
@@ -110,7 +110,7 @@ bot.on('message', async (msg) => {
     const items = categories[category][text];
     if (items.length > 0) {
       bot.sendMessage(chatId, `📦 Chọn sản phẩm thuộc nhóm "${text}":`, {
-        reply_markup: { keyboard: items.map(i => [i]).concat([['/start']]), resize_keyboard: true }
+        reply_markup: { keyboard: [['/start'], ...items.map(i => [i])], resize_keyboard: true }
       });
     } else {
       userData[chatId].product = text;
