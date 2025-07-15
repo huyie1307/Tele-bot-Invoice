@@ -53,7 +53,7 @@ const categories = {
     'Mì': ['Hảo Hảo', 'Omachi bò', 'Omachi tôm', 'Omachi sườn', 'Miliket', 'Chua Cay', 'Lẩu Thái', 'Gà cay', 'Hồng', 'Siêu cay', 'Indomie'],
     'Miến': ['Phú Hương sườn', 'Phú Hương thịt bằm', 'Phú Hương măng'],
     'Phở': ['Vifon gà(bát)', 'Vifon bò(bát)', 'Vifon bò(gói)', 'Thìn', 'Đệ Nhất bò', 'Đệ Nhất gà', 'Đệ Nhất tôm'],
-    'Khác': ['Bánh đa Vifon']
+    'Bánh đa': ['Vifon']
   },
   'Bánh kẹo': {
     'Bánh Gạo': ['An vị vừng', 'An vị tảo biển', 'One One vị mắn', 'One One vị sữa ngô', 'One One vị phô mai', 'One One vị tảo biển'],
