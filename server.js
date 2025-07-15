@@ -72,7 +72,12 @@ bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   userStates[chatId] = 'awaiting_customer';
   userData[chatId] = {};
-  bot.sendMessage(chatId, '👤 Nhập tên khách hàng:');
+  bot.sendMessage(chatId, '👤 Nhập tên khách hàng:', {
+    reply_markup: {
+      keyboard: [['/start']],
+      resize_keyboard: true
+    }
+  });
 });
 
 bot.on('message', async (msg) => {
@@ -86,7 +91,7 @@ bot.on('message', async (msg) => {
     userData[chatId].customer = text;
     userStates[chatId] = 'awaiting_category';
     bot.sendMessage(chatId, '🛒 Chọn danh mục:', {
-      reply_markup: { keyboard: Object.keys(categories).map(c => [c]), resize_keyboard: true }
+      reply_markup: { keyboard: Object.keys(categories).map(c => [c]).concat([['/start']]), resize_keyboard: true }
     });
 
   } else if (state === 'awaiting_category') {
@@ -94,7 +99,7 @@ bot.on('message', async (msg) => {
     userData[chatId].category = text;
     userStates[chatId] = 'awaiting_subcategory';
     bot.sendMessage(chatId, `🔍 Chọn nhóm hàng thuộc "${text}":`, {
-      reply_markup: { keyboard: Object.keys(categories[text]).map(i => [i]), resize_keyboard: true }
+      reply_markup: { keyboard: Object.keys(categories[text]).map(i => [i]).concat([['/start']]), resize_keyboard: true }
     });
 
   } else if (state === 'awaiting_subcategory') {
@@ -105,33 +110,43 @@ bot.on('message', async (msg) => {
     const items = categories[category][text];
     if (items.length > 0) {
       bot.sendMessage(chatId, `📦 Chọn sản phẩm thuộc nhóm "${text}":`, {
-        reply_markup: { keyboard: items.map(i => [i]), resize_keyboard: true }
+        reply_markup: { keyboard: items.map(i => [i]).concat([['/start']]), resize_keyboard: true }
       });
     } else {
       userData[chatId].product = text;
       userStates[chatId] = 'awaiting_quantity';
-      bot.sendMessage(chatId, '✏️ Nhập số lượng:');
+      bot.sendMessage(chatId, '✏️ Nhập số lượng:', {
+        reply_markup: { keyboard: [['/start']], resize_keyboard: true }
+      });
     }
 
   } else if (state === 'awaiting_product') {
     userData[chatId].product = text;
     userStates[chatId] = 'awaiting_quantity';
-    bot.sendMessage(chatId, '✏️ Nhập số lượng:');
+    bot.sendMessage(chatId, '✏️ Nhập số lượng:', {
+      reply_markup: { keyboard: [['/start']], resize_keyboard: true }
+    });
 
   } else if (state === 'awaiting_quantity') {
     userData[chatId].quantity = text;
     userStates[chatId] = 'awaiting_price';
-    bot.sendMessage(chatId, '💵 Nhập giá:');
+    bot.sendMessage(chatId, '💵 Nhập giá:', {
+      reply_markup: { keyboard: [['/start']], resize_keyboard: true }
+    });
 
   } else if (state === 'awaiting_price') {
     userData[chatId].price = text;
 
     try {
       await appendToGoogleSheet(userData[chatId]);
-      bot.sendMessage(chatId, `✅ Đã lưu:\n👤 ${userData[chatId].customer}\n📂 ${userData[chatId].category} > ${userData[chatId].subcategory}\n📦 ${userData[chatId].product}\n🔢 SL: ${userData[chatId].quantity}\n💵 Giá: ${userData[chatId].price}`);
+      bot.sendMessage(chatId, `✅ Đã lưu:\n👤 ${userData[chatId].customer}\n📂 ${userData[chatId].category} > ${userData[chatId].subcategory}\n📦 ${userData[chatId].product}\n🔢 SL: ${userData[chatId].quantity}\n💵 Giá: ${userData[chatId].price}`, {
+        reply_markup: { keyboard: [['/start']], resize_keyboard: true }
+      });
     } catch (error) {
       console.error("Lỗi ghi vào Google Sheets:", error);
-      bot.sendMessage(chatId, "❌ Lỗi ghi vào Google Sheets.");
+      bot.sendMessage(chatId, "❌ Lỗi ghi vào Google Sheets.", {
+        reply_markup: { keyboard: [['/start']], resize_keyboard: true }
+      });
     }
 
     delete userStates[chatId];
@@ -144,11 +159,11 @@ async function appendToGoogleSheet(entry) {
   const sheets = google.sheets({ version: 'v4', auth: client });
 
   const row = [
-  entry.customer,
-  `${entry.category} - ${entry.subcategory} - ${entry.product}`,
-  entry.quantity,
-  entry.price,
-];
+    entry.customer,
+    `${entry.category} - ${entry.subcategory} - ${entry.product}`,
+    entry.quantity,
+    entry.price,
+  ];
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
