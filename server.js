@@ -4,7 +4,6 @@ const { google } = require('googleapis');
 // Đọc biến môi trường Railway (đã setup sẵn)
 const token = process.env.BOT_TOKEN;
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-const SHEET_NAME = process.env.SHEET_NAME;
 const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
 
 // Khởi tạo bot
@@ -18,6 +17,8 @@ const auth = new google.auth.GoogleAuth({
 
 const userStates = {};
 const userData = {};
+
+const availableSheets = ['HUY', 'HAI', 'MINH]; // Cập nhật tùy sheet có sẵn
 
 // Danh mục phân cấp
 const categories = {
@@ -70,11 +71,11 @@ const categories = {
 
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  userStates[chatId] = 'awaiting_customer';
+  userStates[chatId] = 'awaiting_sheet';
   userData[chatId] = {};
-  bot.sendMessage(chatId, '👤 Nhập tên khách hàng:', {
+  bot.sendMessage(chatId, '📄 Chọn sheet để lưu dữ liệu:', {
     reply_markup: {
-      keyboard: [['/start']],
+      keyboard: availableSheets.map(s => [s]).concat([['/start']]),
       resize_keyboard: true
     }
   });
@@ -87,11 +88,19 @@ bot.on('message', async (msg) => {
 
   if (!state || text.startsWith('/')) return;
 
-  if (state === 'awaiting_customer') {
+  if (state === 'awaiting_sheet') {
+    if (!availableSheets.includes(text)) return;
+    userData[chatId].sheetName = text;
+    userStates[chatId] = 'awaiting_customer';
+    bot.sendMessage(chatId, '👤 Nhập tên khách hàng:', {
+      reply_markup: { keyboard: [['/start']], resize_keyboard: true }
+    });
+
+  } else if (state === 'awaiting_customer') {
     userData[chatId].customer = text;
     userStates[chatId] = 'awaiting_category';
     bot.sendMessage(chatId, '🛒 Chọn danh mục:', {
-      reply_markup: { keyboard: [['/start'], ...Object.keys(categories).map(c => [c])], resize_keyboard: true }
+      reply_markup: { keyboard: Object.keys(categories).map(c => [c]).concat([['/start']]), resize_keyboard: true }
     });
 
   } else if (state === 'awaiting_category') {
@@ -99,7 +108,7 @@ bot.on('message', async (msg) => {
     userData[chatId].category = text;
     userStates[chatId] = 'awaiting_subcategory';
     bot.sendMessage(chatId, `🔍 Chọn nhóm hàng thuộc "${text}":`, {
-      reply_markup: { keyboard: [['/start'], ...Object.keys(categories[text]).map(i => [i])], resize_keyboard: true }
+      reply_markup: { keyboard: Object.keys(categories[text]).map(i => [i]).concat([['/start']]), resize_keyboard: true }
     });
 
   } else if (state === 'awaiting_subcategory') {
@@ -110,7 +119,7 @@ bot.on('message', async (msg) => {
     const items = categories[category][text];
     if (items.length > 0) {
       bot.sendMessage(chatId, `📦 Chọn sản phẩm thuộc nhóm "${text}":`, {
-        reply_markup: { keyboard: [['/start'], ...items.map(i => [i])], resize_keyboard: true }
+        reply_markup: { keyboard: items.map(i => [i]).concat([['/start']]), resize_keyboard: true }
       });
     } else {
       userData[chatId].product = text;
@@ -136,6 +145,7 @@ bot.on('message', async (msg) => {
 
   } else if (state === 'awaiting_price') {
     userData[chatId].price = text;
+    userData[chatId].timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
 
     try {
       await appendToGoogleSheet(userData[chatId]);
@@ -163,11 +173,12 @@ async function appendToGoogleSheet(entry) {
     `${entry.category} - ${entry.subcategory} - ${entry.product}`,
     entry.quantity,
     entry.price,
+    entry.timestamp
   ];
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A1`,
+    range: `${entry.sheetName}!A1`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     resource: { values: [row] },
