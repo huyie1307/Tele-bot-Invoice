@@ -18,7 +18,7 @@ const auth = new google.auth.GoogleAuth({
 const userStates = {};
 const userData = {};
 
-const availableSheets = ['HUY', 'HAI', 'MINH]; // Cập nhật tùy sheet có sẵn
+const availableSheets = ['HUY', 'HAI', 'MINH']; // Cập nhật tùy sheet có sẵn
 
 // Danh mục phân cấp
 const categories = {
